@@ -1,29 +1,9 @@
 # Routing Engine — Hà Nội
-
-Hệ thống tìm đường và tìm kiếm địa chỉ xây dựng từ dữ liệu OpenStreetMap.
-Hai chức năng chính: geocoding (text → tọa độ) và routing (tìm đường ngắn nhất).
-
-Dữ liệu đầu vào: hanoi.osm.pbf  
-Ngôn ngữ: C++17, pybind11 cho Python binding
-
-
----
-
-
 ## Cấu trúc thư mục
 
 ```
 Google Maps/
 ├── CMakeLists.txt
-├── build/
-│   ├── RoutingEngine_Parser.exe      CLI preprocessing
-│   ├── routing_engine.*.pyd          Python module
-│   ├── sqlite3.dll
-│   └── z.dll
-├── data/
-│   ├── database.sqlite               Geocoding DB (SQLite FTS5)
-│   ├── hanoi_ch.bin                  CH graph (SoA CSR, ~296 MB)
-│   └── snap_tree.bin                 STR-Tree snap-to-edge (~388 MB)
 ├── include/
 │   ├── graph.h                       Struct CHGraph, CHGraphQuery, HotEdge, ColdEdge
 │   ├── osm_parser.h
