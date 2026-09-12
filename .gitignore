@@ -1,0 +1,37 @@
+# Build directories
+build/
+out/
+bin/
+
+# IDE & Editor folders
+.vscode/
+.vs/
+*.suo
+*.user
+
+# Data and Databases (Do not push heavy map data)
+data/
+*.sqlite
+*.sqlite3
+*.bin
+*.pbf
+*.osm
+
+# Third-party tools and libraries
+libosmium-*/
+osmium-tool-*/
+osmconvert*.exe
+
+# Compiled Python modules
+__pycache__/
+*.pyc
+*.pyd
+*.so
+
+# CMake / Make
+CMakeCache.txt
+CMakeFiles/
+Makefile
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
