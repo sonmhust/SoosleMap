@@ -15,7 +15,7 @@ struct POIData {
     int64_t     osm_id = 0;
     std::string name;
     std::string name_vi;
-    std::string name_norm;  // bỏ dấu + lowercase (tính offline, không tốn gì query-time)
+    std::string name_norm;  // Chuỗi tên đã loại bỏ dấu và chuyển sang chữ thường (được xử lý ngoại tuyến)
     std::string type;       // "street", "amenity", "shop", etc.
     double      lat = 0.0;
     double      lon = 0.0;
@@ -69,12 +69,12 @@ public:
     void insertPOI(const POIData& poi);
     void insertAddrRange(const AddrRange& range);
 
-    // --- Build indexes (gọi sau commit) ---
+    // --- Xây dựng chỉ mục (được gọi sau khi hoàn tất giao dịch) ---
     void finalizeFTS();
 
     // --- Query ---
     // Tìm kiếm địa điểm theo text.
-    // user_lat/lon: nếu có → rank theo khoảng cách; nếu nullopt → pure bm25
+    // Tọa độ người dùng: nếu được cung cấp sẽ ưu tiên xếp hạng theo khoảng cách; nếu bỏ trống sẽ sử dụng thuật toán BM25 thuần túy
     std::vector<SearchResult> searchPOI(
         const std::string& query_norm,
         std::optional<double> user_lat = std::nullopt,

@@ -8,10 +8,7 @@ project(RoutingEngine)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# 1. Find osmium headers
-find_path(OSMIUM_INCLUDE_DIRS "osmium/version.hpp")
-
-# 2. Find ZLIB (required for PBF decompression)
+# 1. Find ZLIB
 find_package(ZLIB REQUIRED)
 
 # 3. Find SQLite3 (required for geocoding database)
@@ -44,23 +41,8 @@ add_executable(RoutingEngine_Parser
     src/snap_tree.cpp
     src/address_parser.cpp
 )
-target_include_directories(RoutingEngine_Parser PRIVATE include ${OSMIUM_INCLUDE_DIRS})
+target_include_directories(RoutingEngine_Parser PRIVATE include)
 target_link_libraries(RoutingEngine_Parser PRIVATE
-    ZLIB::ZLIB
-    unofficial::sqlite3::sqlite3
-)
-
-
-# query_server  — interactive CLI for route queries
-add_executable(query_server
-    src/query_server.cpp
-    src/snap_tree.cpp
-    src/serializer.cpp
-    src/graph.cpp
-    src/routing.cpp
-)
-target_include_directories(query_server PRIVATE include ${OSMIUM_INCLUDE_DIRS})
-target_link_libraries(query_server PRIVATE
     ZLIB::ZLIB
     unofficial::sqlite3::sqlite3
 )

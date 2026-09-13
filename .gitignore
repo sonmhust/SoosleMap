@@ -2,6 +2,8 @@
 build/
 out/
 bin/
+test/
+tests/
 
 # IDE & Editor folders
 .vscode/
@@ -35,3 +37,6 @@ Makefile
 cmake_install.cmake
 install_manifest.txt
 compile_commands.json
+
+OptimizationTechnique.md
+structure.md    

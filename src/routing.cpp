@@ -16,6 +16,49 @@ struct PQState {
     }
 };
 
+// ===== Workspace tái sử dụng giữa các query (Amortized Allocation) =====
+// Thay vì allocate ~30 MB (4 vector × 1.85M phần tử) mới cho mỗi query,
+// workspace allocate 1 lần duy nhất khi query đầu tiên chạy.
+// Sau mỗi query, chỉ reset các node đã chạm (~1000 node) — O(visited) thay vì O(N).
+
+struct QueryWorkspace {
+    std::vector<float> dist_f, dist_b;
+    std::vector<uint32_t> parent_f, parent_b;
+    std::vector<uint32_t> touched;  // danh sách node đã bị sửa đổi
+    uint32_t capacity = 0;
+
+    // Allocate 1 lần duy nhất (hoặc khi graph đổi kích thước)
+    void init(uint32_t n) {
+        capacity = n;
+        dist_f.assign(n, INF_WEIGHT);
+        dist_b.assign(n, INF_WEIGHT);
+        parent_f.assign(n, NO_EDGE);
+        parent_b.assign(n, NO_EDGE);
+        touched.reserve(8192);
+    }
+
+    // Reset chỉ các node đã chạm về trạng thái ban đầu — O(visited)
+    void reset() {
+        for (uint32_t u : touched) {
+            dist_f[u] = INF_WEIGHT;
+            dist_b[u] = INF_WEIGHT;
+            parent_f[u] = NO_EDGE;
+            parent_b[u] = NO_EDGE;
+        }
+        touched.clear();
+    }
+
+    // Đánh dấu node đã chạm (gọi TRƯỚC khi ghi dist/parent)
+    // Chỉ thêm vào danh sách nếu node chưa từng bị chạm trong query này
+    void touch(uint32_t u) {
+        if (dist_f[u] >= INF_WEIGHT && dist_b[u] >= INF_WEIGHT) {
+            touched.push_back(u);
+        }
+    }
+};
+
+static QueryWorkspace g_workspace;
+
 // Hàm đệ quy giải nén các shortcut tiến (Forward)
 static void unpackForwardEdge(const CHGraphQuery& graph, uint32_t u, uint32_t v, uint8_t mode, std::vector<uint32_t>& path_nodes) {
     // Tìm cạnh u -> v trong fwd_hot
@@ -109,20 +152,26 @@ RouteResult findShortestPathCH(const CHGraphQuery& graph, uint32_t source, uint3
         return result;
     }
 
-    // Khoảng cách từ source (forward) và từ target (backward)
-    std::vector<float> dist_f(graph.num_nodes, INF_WEIGHT);
-    std::vector<float> dist_b(graph.num_nodes, INF_WEIGHT);
+    // Lazy init workspace (chỉ allocate lần đầu hoặc khi graph thay đổi kích thước)
+    if (g_workspace.capacity < graph.num_nodes) {
+        g_workspace.init(graph.num_nodes);
+    }
+    g_workspace.reset();  // Reset chỉ các node đã chạm từ query trước — O(visited)
 
-    // Truy xuất cha để khôi phục đường đi
-    std::vector<uint32_t> parent_f(graph.num_nodes, NO_EDGE);
-    std::vector<uint32_t> parent_b(graph.num_nodes, NO_EDGE);
+    // Reference aliases để code bên dưới giữ nguyên cú pháp
+    auto& dist_f   = g_workspace.dist_f;
+    auto& dist_b   = g_workspace.dist_b;
+    auto& parent_f = g_workspace.parent_f;
+    auto& parent_b = g_workspace.parent_b;
 
     std::priority_queue<PQState, std::vector<PQState>, std::greater<PQState>> pq_f;
     std::priority_queue<PQState, std::vector<PQState>, std::greater<PQState>> pq_b;
 
+    g_workspace.touch(source);
     dist_f[source] = 0.0f;
     pq_f.push({0.0f, source});
 
+    g_workspace.touch(target);
     dist_b[target] = 0.0f;
     pq_b.push({0.0f, target});
 
@@ -163,6 +212,7 @@ RouteResult findShortestPathCH(const CHGraphQuery& graph, uint32_t source, uint3
 
                 float new_dist = d + edge.weight;
                 if (new_dist < dist_f[v]) {
+                    g_workspace.touch(v);
                     dist_f[v] = new_dist;
                     parent_f[v] = u;
                     pq_f.push({new_dist, v});
@@ -192,6 +242,7 @@ RouteResult findShortestPathCH(const CHGraphQuery& graph, uint32_t source, uint3
 
                 float new_dist = d + edge.weight;
                 if (new_dist < dist_b[v]) {
+                    g_workspace.touch(v);
                     dist_b[v] = new_dist;
                     parent_b[v] = u;
                     pq_b.push({new_dist, v});

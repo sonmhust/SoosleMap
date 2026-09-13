@@ -3,8 +3,8 @@
 
 // Address Query Parser
 struct AddressQuery {
-    int         house_number = -1;    // -1 = không có số nhà
-    std::string house_suffix;         // "A", "B", "" — cho "50A", "125B"
+    int         house_number = -1;    // Giá trị -1 biểu thị địa chỉ không có số nhà
+    std::string house_suffix;         // Phần hậu tố của số nhà (ví dụ: "A", "B" trong "50A", "125B")
     std::string street;               // tên đường (đã normalize)
     std::string ward;                 // phường/xã (đã normalize)
     std::string district;             // quận/huyện (đã normalize)

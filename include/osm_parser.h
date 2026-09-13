@@ -35,7 +35,7 @@ struct ParsedData {
 // Module 2: Car only (motorway/expressway)
 // Module 3: Walking + Cycling
 static const std::unordered_set<std::string> ACCEPTED_HIGHWAYS = {
-    // Car only (cao toc)
+    // Đường dành riêng cho ô tô (đường cao tốc)
     "motorway", "motorway_link",
     // Mixed (car + motorbike)
     "trunk", "trunk_link",
