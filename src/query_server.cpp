@@ -54,9 +54,7 @@ int main(int argc, char* argv[]) {
     std::cout << "  Load time      : " << load_graph_ms << " ms\n\n";
 
     // Interactive query loop
-    std::cout << "============================================\n";
-    std::cout << "  SNAP-TO-EDGE QUERY SERVER (demo CLI)\n";
-    std::cout << "============================================\n";
+    std::cout << "  SNAP-TO-EDGE QUERY SERVER \n";
     std::cout << "Enter lat lon (or 'q' to quit):\n\n";
 
     std::string line;

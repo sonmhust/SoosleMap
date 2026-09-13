@@ -1,3 +1,7 @@
+#cmake có tác dụng gom các file .cpp riêng lẻ để tự động hướng dẫn compiler build ra file thực thi tùy hệ điều hành
+#với CMakeList.txt :
+#(nếu tạo file thực thi -> 1 trong các file phải là file main hoặc có chứa hàm main)
+#Nếu tạo thư viện -> cmake gom file tạo thành 1 thư viện động, cung cấp hàm
 cmake_minimum_required(VERSION 3.10)
 project(RoutingEngine)
 
