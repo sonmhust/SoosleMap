@@ -1,3 +1,10 @@
+// Cross-platform large file seek
+#ifdef _WIN32
+  #define fseek64 _fseeki64
+#else
+  #define fseek64 fseeko64
+#endif
+
 #include "snap_tree.h"
 #include "haversine.h"
 
@@ -296,8 +303,8 @@ SnapTree buildSnapTreeFromFile(const std::string& filepath, int leaf_capacity) {
     FILE* f_hot = fopen(filepath.c_str(), "rb");
     FILE* f_cold = fopen(filepath.c_str(), "rb");
     
-    _fseeki64(f_hot, offset_fwd_hot, SEEK_SET);
-    _fseeki64(f_cold, offset_fwd_cold, SEEK_SET);
+    fseek64(f_hot, offset_fwd_hot, SEEK_SET);
+    fseek64(f_cold, offset_fwd_cold, SEEK_SET);
 
     std::cout << "  Streaming " << header.num_fwd_edges << " forward edges...\n";
     std::vector<EdgeEntry> entries;

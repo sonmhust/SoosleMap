@@ -2,8 +2,6 @@
 build/
 out/
 bin/
-test/
-tests/
 
 # IDE & Editor folders
 .vscode/
@@ -11,7 +9,7 @@ tests/
 *.suo
 *.user
 
-# Data and Databases (Do not push heavy map data)
+# Data and Databases (large binary files, không push lên Git)
 data/
 *.sqlite
 *.sqlite3
@@ -19,7 +17,7 @@ data/
 *.pbf
 *.osm
 
-# Third-party tools and libraries
+# Third-party tools and libraries (quá nặng)
 libosmium-*/
 osmium-tool-*/
 osmconvert*.exe
@@ -30,7 +28,7 @@ __pycache__/
 *.pyd
 *.so
 
-# CMake / Make
+# CMake / Make artifacts
 CMakeCache.txt
 CMakeFiles/
 Makefile
@@ -38,5 +36,11 @@ cmake_install.cmake
 install_manifest.txt
 compile_commands.json
 
+# Environment variables (chứa secret, KHÔNG bao giờ commit)
+.env
+
+# Test directories
+test/
+tests/
+
 OptimizationTechnique.md
-structure.md    

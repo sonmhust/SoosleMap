@@ -12,7 +12,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_package(ZLIB REQUIRED)
 
 # 3. Find SQLite3 (required for geocoding database)
-find_package(unofficial-sqlite3 CONFIG REQUIRED)
+# Trên Linux/Docker: libsqlite3-dev cung cấp SQLite::SQLite3 chuẩn
+# Trên Windows (vcpkg): cài unofficial-sqlite3 thủ công nếu cần
+find_package(SQLite3 REQUIRED)
+set(SQLITE3_LIB SQLite::SQLite3)
 
 # 4. Find Pybind11 via FetchContent
 include(FetchContent)
@@ -24,28 +27,7 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(pybind11)
 
 
-# RoutingEngine_Parser
-#   - Parses OSM PBF
-#   - Runs CH contraction
-#   - Serializes directly to SoA CSR (hanoi_ch.bin) — no converter
-#   - Builds STR-tree (snap_tree.bin)
-#   - Streams POIs to SQLite (database.sqlite)
 
-add_executable(RoutingEngine_Parser
-    src/preprocessing/main.cpp
-    src/preprocessing/osm_parser.cpp
-    src/geocoding_db.cpp
-    src/graph.cpp
-    src/preprocessing/contraction.cpp
-    src/serializer.cpp
-    src/snap_tree.cpp
-    src/address_parser.cpp
-)
-target_include_directories(RoutingEngine_Parser PRIVATE include)
-target_link_libraries(RoutingEngine_Parser PRIVATE
-    ZLIB::ZLIB
-    unofficial::sqlite3::sqlite3
-)
 
 
 # routing_engine — Python extension module (pybind11)
@@ -62,5 +44,5 @@ pybind11_add_module(routing_engine
 target_include_directories(routing_engine PRIVATE include)
 target_link_libraries(routing_engine PRIVATE
     ZLIB::ZLIB
-    unofficial::sqlite3::sqlite3
+    ${SQLITE3_LIB}
 )

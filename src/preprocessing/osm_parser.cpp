@@ -76,10 +76,22 @@ public:
         wd.highway_type = hw_type;
 
         // Check oneway
+        // Check oneway
+        bool is_reverse = false;
         const char* oneway = way.tags().get_value_by_key("oneway");
         if (oneway) {
             std::string ow(oneway);
-            wd.oneway = (ow == "yes" || ow == "1" || ow == "true");
+            if (ow == "-1" || ow == "reverse") {
+                wd.oneway = true;
+                is_reverse = true;
+            } else {
+                wd.oneway = (ow == "yes" || ow == "1" || ow == "true");
+            }
+        }
+        
+        const char* junction = way.tags().get_value_by_key("junction");
+        if (junction && std::string(junction) == "roundabout") {
+            wd.oneway = true; // Roundabouts are implicitly oneway
         }
         if (hw_type == "motorway" || hw_type == "motorway_link") {
             wd.oneway = true;
@@ -90,6 +102,11 @@ public:
             int64_t nid = node_ref.ref();
             wd.node_ids.push_back(nid);
             valid_nodes.push_back(nid);
+        }
+
+        // Reverse if oneway=-1
+        if (is_reverse) {
+            std::reverse(wd.node_ids.begin(), wd.node_ids.end());
         }
 
         ways.push_back(std::move(wd));

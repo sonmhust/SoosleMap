@@ -1,0 +1,38 @@
+# Build artifacts
+build/
+out/
+
+# Preprocessing source (không cần trong Docker, data đã có sẵn dạng .bin)
+src/preprocessing/
+
+# Data files (quá lớn, được mount qua Volume)
+data/
+*.bin
+*.sqlite
+*.pbf
+*.osm
+*.zip
+
+# Osmium tool và libosmium (chỉ cần cho preprocessing, không dùng trong Docker)
+osmium-tool-master/
+libosmium-2.23.1/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyd
+
+# IDE
+.vscode/
+.vs/
+
+# Git
+.git/
+.gitignore
+
+# Env file
+.env
+
+# Docs
+*.md
+BenchmarkResult/

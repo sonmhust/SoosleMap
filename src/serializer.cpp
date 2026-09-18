@@ -1,4 +1,13 @@
 // serializer.cpp — CH Graph binary I/O (SoA CSR format, v2)
+
+// Cross-platform large file seek/tell
+#ifdef _WIN32
+  #define fseek64 _fseeki64
+  #define ftell64 _ftelli64
+#else
+  #define fseek64 fseeko64
+  #define ftell64 ftello64
+#endif
 //
 // File layout (v1):
 //   [FileHeader]    20 bytes   — magic 0x43484752 ("CHGR"), num_nodes, num_fwd, num_bwd, version=1
@@ -146,8 +155,8 @@ void serializeGraph(const CHGraph& graph, const std::string& filepath) {
 
     FILE* fc = fopen(filepath.c_str(), "rb");
     if (fc) {
-        _fseeki64(fc, 0, SEEK_END);
-        long long sz = _ftelli64(fc);
+        fseek64(fc, 0, SEEK_END);
+        long long sz = ftell64(fc);
         fclose(fc);
         std::cout << "  File size: " << (sz / (1024 * 1024)) << " MB\n";
     }
@@ -276,7 +285,7 @@ bool loadGraphCoordinates(CHGraphQuery& graph, const std::string& filepath) {
 
     // Skip SerNodeHot block (N+1 entries) to reach SerNodeCold
     long long hot_block_bytes = (long long)(n + 1) * sizeof(SerNodeHot);
-    if (_fseeki64(f, hot_block_bytes, SEEK_CUR) != 0) { fclose(f); return false; }
+    if (fseek64(f, hot_block_bytes, SEEK_CUR) != 0) { fclose(f); return false; }
 
     // Read SerNodeCold directly
     std::vector<SerNodeCold> cold(n);
