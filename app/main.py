@@ -1,6 +1,12 @@
 # pyrefly: ignore [missing-import]
 from fastapi import FastAPI, HTTPException
 # pyrefly: ignore [missing-import]
+from fastapi.staticfiles import StaticFiles
+# pyrefly: ignore [missing-import]
+from fastapi.responses import FileResponse
+# pyrefly: ignore [missing-import]
+from fastapi.middleware.cors import CORSMiddleware
+# pyrefly: ignore [missing-import]
 from pydantic import BaseModel
 import sys
 import os
@@ -23,6 +29,19 @@ app = FastAPI(
     description="C++ Routing Engine (Contraction Hierarchies) wrapped via Pybind11",
     version="1.0.0"
 )
+
+# CORS cho phép local dev (browser gọi thẳng API không qua Nginx)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Serve frontend HTML tại /static/
+STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
+if os.path.isdir(STATIC_DIR):
+    app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 # Các biến toàn cục nạp lên RAM một lần duy nhất lúc startup
 graph = None
@@ -112,8 +131,20 @@ def geocode_with_cache(query: str) -> dict | None:
 
 
 # ──────────────────────────────────────────────
-# Helper: Tính đường đi
+# Helper: chọn node gần điểm chiếu hơn
 # ──────────────────────────────────────────────
+def pick_node(snap_result) -> int:
+    """Chọn edge_u hoặc edge_v tùy cái nào gần proj_lat/proj_lon hơn.
+    Tránh lỗi snap xa khi cạnh dài và điểm click gần edge_v (t ≈ 1.0).
+    """
+    u, v = snap_result.edge_u, snap_result.edge_v
+    du = (graph.get_lat(u) - snap_result.proj_lat) ** 2 \
+       + (graph.get_lon(u) - snap_result.proj_lon) ** 2
+    dv = (graph.get_lat(v) - snap_result.proj_lat) ** 2 \
+       + (graph.get_lon(v) - snap_result.proj_lon) ** 2
+    return u if du <= dv else v
+
+
 def compute_route(lat_a: float, lon_a: float, lat_b: float, lon_b: float, mode: int) -> dict:
     if not graph or not snap:
         raise HTTPException(status_code=503, detail="Engine chưa sẵn sàng hoặc thiếu file data.")
@@ -124,7 +155,11 @@ def compute_route(lat_a: float, lon_a: float, lat_b: float, lon_b: float, mode: 
     if not snap_from.valid or not snap_to.valid:
         raise HTTPException(status_code=400, detail="Toạ độ không nằm trên bản đồ hoặc quá xa đường đi.")
 
-    route = routing_engine.find_shortest_path_ch(graph, snap_from.edge_u, snap_to.edge_u, mode)
+    # Dùng node gần điểm chiếu nhất thay vì luôn dùng edge_u
+    start_node = pick_node(snap_from)
+    end_node   = pick_node(snap_to)
+
+    route = routing_engine.find_shortest_path_ch(graph, start_node, end_node, mode)
 
     if not route.valid:
         raise HTTPException(status_code=404, detail="Không tìm thấy đường đi giữa 2 điểm.")
@@ -136,6 +171,9 @@ def compute_route(lat_a: float, lon_a: float, lat_b: float, lon_b: float, mode: 
         "time_s": round(route.time_s, 2),
         "time_min": round(route.time_s / 60.0, 2),
         "path_coords": route.path_coords,
+        # Tọa độ snap thực tế để frontend hiển thị (debug)
+        "snap_from": {"lat": snap_from.proj_lat, "lon": snap_from.proj_lon, "dist_m": round(snap_from.dist_m, 1)},
+        "snap_to":   {"lat": snap_to.proj_lat,   "lon": snap_to.proj_lon,   "dist_m": round(snap_to.dist_m, 1)},
     }
 
 
@@ -202,4 +240,8 @@ def health():
 
 @app.get("/")
 def root():
-    return {"message": "Routing Engine API. Truy cập /docs để xem Swagger UI."}
+    """Trả về frontend HTML nếu có, fallback về JSON."""
+    index_path = os.path.join(STATIC_DIR, "index.html") if os.path.isdir(STATIC_DIR) else None
+    if index_path and os.path.isfile(index_path):
+        return FileResponse(index_path)
+    return {"message": "Routing Engine API. Truy cap /docs de xem Swagger UI."}

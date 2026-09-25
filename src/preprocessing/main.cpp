@@ -81,7 +81,12 @@ int main(int argc, char* argv[]) {
         // ===================================================
         std::cout << "=== Step 6: Building STR-Tree ===\n";
         auto snap_start = std::chrono::steady_clock::now();
-        SnapTree snap_tree = buildSnapTree(graph);
+        
+        // Load the reordered graph to build the snap tree with correct CH node IDs
+        CHGraphQuery graph_query;
+        loadGraphQuery(graph_query, ch_path);
+        SnapTree snap_tree = buildSnapTreeQuery(graph_query);
+        
         saveSnapTree(snap_tree, snap_path);
         double snap_sec = std::chrono::duration<double>(
             std::chrono::steady_clock::now() - snap_start).count();

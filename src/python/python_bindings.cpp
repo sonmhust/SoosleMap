@@ -6,7 +6,7 @@
 #include "serializer.h"
 #include "snap_tree.h"
 #include "address_parser.h"
-#include "routing.h"
+#include "routing.h"   // also declares snapNearestCached
 
 namespace py = pybind11;
 
@@ -82,6 +82,12 @@ PYBIND11_MODULE(routing_engine, m) {
     m.def("snap_nearest", [](const SnapTree& tree, const CHGraphQuery& graph, double lat, double lon) {
         return snapNearestQuery(tree, graph, lat, lon);
     }, "Snap GPS point to nearest CHGraphQuery edge");
+
+    // Cached version: LRU 64 entry, key = GPS rounded to ~1.1m.
+    // Cache hit skips STR-Tree BFS (~2ms). Use this instead of snap_nearest in production.
+    m.def("snap_nearest_cached", [](const SnapTree& tree, const CHGraphQuery& graph, double lat, double lon) {
+        return snapNearestCached(tree, graph, lat, lon);
+    }, "Snap GPS point to nearest edge, with LRU cache (64 entries, ~1.1m key precision)");
 
     // Đăng ký class RouteResult để lưu kết quả tìm đường
     py::class_<RouteResult>(m, "RouteResult")

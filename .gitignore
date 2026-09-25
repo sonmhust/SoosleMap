@@ -48,3 +48,7 @@ structure.md
 DeployRoadmap.md
 laterneed.md
 comments.txt
+
+CICD.txt
+test.py
+*.zip

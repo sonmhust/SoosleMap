@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SoosleMap — Routing Engine Ha Noi</title>
+  <meta name="description" content="Demo tim duong Ha Noi su dung C++ Contraction Hierarchies Engine. Click ban do de chon diem xuat phat va dich den." />
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg-dark:    #0d1117;
+      --bg-panel:   #161b22;
+      --bg-card:    #21262d;
+      --border:     #30363d;
+      --accent:     #4f8ef7;
+      --accent-glow:#4f8ef740;
+      --green:      #3fb950;
+      --red:        #f85149;
+      --orange:     #e3b341;
+      --text-1:     #e6edf3;
+      --text-2:     #8b949e;
+      --text-3:     #484f58;
+      --radius:     12px;
+      --panel-w:    360px;
+    }
+
+    html, body { height: 100%; font-family: 'Inter', system-ui, sans-serif; background: var(--bg-dark); color: var(--text-1); overflow: hidden; }
+
+    #app { display: flex; height: 100vh; position: relative; }
+
+    #panel { width: var(--panel-w); min-width: var(--panel-w); background: var(--bg-panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; z-index: 10; }
+
+    .panel-header { padding: 20px 20px 16px; border-bottom: 1px solid var(--border); background: linear-gradient(135deg, #1a2332 0%, #161b22 100%); }
+
+    .logo { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+    .logo-icon { width: 32px; height: 32px; background: linear-gradient(135deg, var(--accent), #7c5cfc); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+    .logo-text { font-size: 18px; font-weight: 700; background: linear-gradient(90deg, var(--accent), #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .logo-sub { font-size: 11px; color: var(--text-2); margin-top: 2px; letter-spacing: 0.5px; }
+
+    .panel-body { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+    .panel-body::-webkit-scrollbar { width: 4px; }
+    .panel-body::-webkit-scrollbar-track { background: transparent; }
+    .panel-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    .section-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: var(--text-2); margin-bottom: 8px; }
+
+    .search-group { position: relative; }
+    .search-input { width: 100%; background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 10px 36px 10px 12px; color: var(--text-1); font-family: inherit; font-size: 13px; transition: border-color 0.2s, box-shadow 0.2s; outline: none; }
+    .search-input::placeholder { color: var(--text-3); }
+    .search-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+    .search-icon { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: var(--text-2); font-size: 14px; pointer-events: none; }
+
+    .suggestion-list { position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; z-index: 9999; display: none; max-height: 200px; overflow-y: auto; }
+    .suggestion-list.open { display: block; }
+    .suggestion-item { padding: 9px 12px; font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: background 0.15s; border-bottom: 1px solid var(--border); }
+    .suggestion-item:last-child { border-bottom: none; }
+    .suggestion-item:hover { background: var(--bg-panel); }
+    .poi-type-badge { font-size: 10px; padding: 2px 6px; border-radius: 4px; background: var(--bg-dark); color: var(--text-2); white-space: nowrap; flex-shrink: 0; }
+
+    .waypoint-row { display: flex; align-items: center; gap: 8px; }
+    .waypoint-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; border: 2px solid; }
+    .dot-a { background: var(--green); border-color: var(--green); }
+    .dot-b { background: var(--red);   border-color: var(--red); }
+    .waypoint-info { flex: 1; background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; font-size: 12px; min-height: 36px; display: flex; align-items: center; }
+    .waypoint-info.has-value { color: var(--text-1); }
+    .waypoint-info.empty { color: var(--text-3); font-style: italic; }
+    .clear-btn { background: none; border: none; color: var(--text-3); cursor: pointer; font-size: 14px; padding: 4px; border-radius: 4px; transition: color 0.15s; line-height: 1; }
+    .clear-btn:hover { color: var(--red); }
+
+    .mode-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .mode-btn { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 10px 8px; color: var(--text-2); font-family: inherit; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.2s; }
+    .mode-btn:hover { border-color: var(--accent); color: var(--text-1); }
+    .mode-btn.active { background: var(--accent-glow); border-color: var(--accent); color: var(--accent); }
+
+    #btn-route { width: 100%; padding: 12px; background: linear-gradient(135deg, var(--accent), #7c5cfc); border: none; border-radius: 8px; color: #fff; font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer; transition: opacity 0.2s, transform 0.1s; position: relative; overflow: hidden; }
+    #btn-route::before { content: ''; position: absolute; inset: 0; background: rgba(255,255,255,0.1); opacity: 0; transition: opacity 0.2s; }
+    #btn-route:hover::before { opacity: 1; }
+    #btn-route:active { transform: scale(0.98); }
+    #btn-route:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    #result-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; display: none; }
+    #result-card.visible { display: block; }
+    .result-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+    .result-row:last-child { border-bottom: none; }
+    .result-key { color: var(--text-2); }
+    .result-val { font-weight: 600; color: var(--text-1); }
+    .result-val.green { color: var(--green); }
+    .result-val.accent { color: var(--accent); }
+
+    #status-bar { padding: 10px 16px; border-top: 1px solid var(--border); font-size: 12px; color: var(--text-2); background: var(--bg-dark); display: flex; align-items: center; gap: 8px; }
+    .status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-3); flex-shrink: 0; }
+    .status-dot.online  { background: var(--green); box-shadow: 0 0 6px var(--green); animation: pulse 2s infinite; }
+    .status-dot.loading { background: var(--orange); }
+    .status-dot.error   { background: var(--red); }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+    #map { flex: 1; position: relative; }
+
+    #map-hint { position: absolute; top: 16px; left: 50%; transform: translateX(-50%); z-index: 500; background: rgba(13,17,23,0.85); backdrop-filter: blur(12px); border: 1px solid var(--border); border-radius: 20px; padding: 8px 16px; font-size: 12px; color: var(--text-2); pointer-events: none; white-space: nowrap; transition: opacity 0.4s; }
+
+    #mode-indicator { position: absolute; top: 16px; right: 16px; z-index: 500; display: flex; flex-direction: column; gap: 6px; }
+    .mode-pill { background: rgba(13,17,23,0.85); backdrop-filter: blur(12px); border: 1px solid var(--border); border-radius: 8px; padding: 6px 12px; font-size: 11px; font-weight: 500; color: var(--text-2); }
+    .mode-pill.active-a { border-color: var(--green); color: var(--green); }
+    .mode-pill.active-b { border-color: var(--red); color: var(--red); }
+
+    .leaflet-tile-pane { filter: brightness(0.75) saturate(0.7) hue-rotate(10deg); }
+    .leaflet-control-attribution { background: rgba(13,17,23,0.8) !important; color: var(--text-3) !important; }
+    .leaflet-control-attribution a { color: var(--text-2) !important; }
+    .leaflet-control-zoom a { background: var(--bg-card) !important; color: var(--text-1) !important; border-color: var(--border) !important; }
+    .leaflet-control-zoom a:hover { background: var(--bg-panel) !important; }
+
+    .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.6s linear infinite; vertical-align: middle; margin-right: 6px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    #toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px); background: #2d1a1a; border: 1px solid var(--red); border-radius: 8px; padding: 10px 20px; font-size: 13px; color: #ffa8a8; z-index: 9999; transition: transform 0.3s ease; pointer-events: none; white-space: nowrap; }
+    #toast.show { transform: translateX(-50%) translateY(0); }
+
+    @media (max-width: 640px) {
+      :root { --panel-w: 100vw; }
+      #app { flex-direction: column; }
+      #panel { width: 100%; min-width: unset; height: 48vh; border-right: none; border-bottom: 1px solid var(--border); }
+      #map { height: 52vh; }
+    }
+  </style>
+</head>
+<body>
+<div id="app">
+  <div id="panel">
+    <div class="panel-header">
+      <div class="logo">
+        <div class="logo-icon">&#128506;</div>
+        <div>
+          <div class="logo-text">SoosleMap</div>
+          <div class="logo-sub">Routing Engine &middot; Ha Noi &middot; C++ CH</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel-body">
+      <!-- POI Search -->
+      <div>
+        <div class="section-label">&#128269; Tim kiem dia diem</div>
+        <div class="search-group">
+          <input id="poi-search" class="search-input" type="text"
+            placeholder="Ho Hoan Kiem, Ly Thuong Kiet..."
+            autocomplete="off" />
+          <span class="search-icon">&#9906;</span>
+          <div class="suggestion-list" id="suggestion-list"></div>
+        </div>
+      </div>
+
+      <!-- Waypoints -->
+      <div>
+        <div class="section-label">&#128205; Diem xuat phat &amp; Dich den</div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div class="waypoint-row">
+            <div class="waypoint-dot dot-a"></div>
+            <div class="waypoint-info empty" id="wp-a-info">Click vao ban do de chon diem A</div>
+            <button class="clear-btn" id="btn-clear-a" title="Xoa diem A">&#10005;</button>
+          </div>
+          <div class="waypoint-row">
+            <div class="waypoint-dot dot-b"></div>
+            <div class="waypoint-info empty" id="wp-b-info">Click vao ban do de chon diem B</div>
+            <button class="clear-btn" id="btn-clear-b" title="Xoa diem B">&#10005;</button>
+          </div>
+        </div>
+        <p style="font-size:11px;color:var(--text-3);margin-top:8px;">
+          &#128161; Click lan luot: lan 1 = diem A, lan 2 = diem B
+        </p>
+      </div>
+
+      <!-- Transport mode -->
+      <div>
+        <div class="section-label">&#128663; Phuong tien</div>
+        <div class="mode-grid">
+          <button class="mode-btn active" data-mode="1" id="mode-car">&#128663; O to</button>
+          <button class="mode-btn" data-mode="2" id="mode-moto">&#127949; Xe may</button>
+          <button class="mode-btn" data-mode="4" id="mode-bike">&#128690; Xe dap</button>
+          <button class="mode-btn" data-mode="8" id="mode-walk">&#128694; Di bo</button>
+        </div>
+      </div>
+
+      <!-- Route button -->
+      <button id="btn-route" disabled>Tim duong</button>
+
+      <!-- Result -->
+      <div id="result-card">
+        <div class="section-label" style="margin-bottom:10px;">&#128200; Ket qua tuyen duong</div>
+        <div class="result-row">
+          <span class="result-key">Khoang cach</span>
+          <span class="result-val green" id="res-dist">--</span>
+        </div>
+        <div class="result-row">
+          <span class="result-key">Thoi gian</span>
+          <span class="result-val accent" id="res-time">--</span>
+        </div>
+        <div class="result-row">
+          <span class="result-key">So diem duong</span>
+          <span class="result-val" id="res-pts">--</span>
+        </div>
+        <div class="result-row">
+          <span class="result-key">Query time</span>
+          <span class="result-val" id="res-qtime" style="color:var(--orange);">--</span>
+        </div>
+        <div class="result-row">
+          <span class="result-key">Snap A / B</span>
+          <span class="result-val" id="res-snap" style="font-size:11px;color:var(--text-2);">--</span>
+        </div>
+      </div>
+    </div>
+
+    <div id="status-bar">
+      <div class="status-dot" id="status-dot"></div>
+      <span id="status-text">Dang ket noi API...</span>
+    </div>
+  </div>
+
+  <div id="map">
+    <div id="map-hint">&#128432; Click ban do: lan 1 = diem A, lan 2 = diem B</div>
+    <div id="mode-indicator">
+      <div class="mode-pill active-a" id="pill-a">&#9679; Chon diem A</div>
+      <div class="mode-pill" id="pill-b">&#9675; Cho diem B</div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+// ── Config ──────────────────────────────────────────────────────────────
+// API_BASE: '' = same origin (khi Nginx serve ca frontend + API)
+// Doi thanh 'http://localhost:8000' khi test local truc tiep
+const API_BASE = '';
+
+// ── State ────────────────────────────────────────────────────────────────
+var markerA = null, markerB = null;
+var snapMarkerA = null, snapMarkerB = null;  // chấm snap trên tim đường
+var routePolyline = null;
+var clickPhase = 'A';
+var transportMode = 1;
+var searchTimeout = null;
+
+// ── Map Init ─────────────────────────────────────────────────────────────
+var map = L.map('map', {
+  center: [21.0285, 105.8542],
+  zoom: 13,
+  zoomControl: true,
+});
+
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+  maxZoom: 19,
+}).addTo(map);
+
+// ── Custom icons ──────────────────────────────────────────────────────────
+function makeIcon(color, label) {
+  return L.divIcon({
+    className: '',
+    html: '<div style="width:32px;height:32px;background:' + color + ';border:3px solid #fff;border-radius:50% 50% 50% 0;transform:rotate(-45deg);box-shadow:0 2px 8px rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;"><span style="transform:rotate(45deg);font-size:12px;font-weight:700;color:#fff;">' + label + '</span></div>',
+    iconSize: [32, 32],
+    iconAnchor: [16, 32],
+  });
+}
+
+var iconA = makeIcon('#3fb950', 'A');
+var iconB = makeIcon('#f85149', 'B');
+
+// ── Map click ────────────────────────────────────────────────────────────
+map.on('click', function(e) {
+  var lat = e.latlng.lat, lng = e.latlng.lng;
+  if (clickPhase === 'A') {
+    setWaypointA(lat, lng, lat.toFixed(5) + ', ' + lng.toFixed(5));
+  } else {
+    setWaypointB(lat, lng, lat.toFixed(5) + ', ' + lng.toFixed(5));
+  }
+});
+
+function setWaypointA(lat, lon, label) {
+  if (markerA) map.removeLayer(markerA);
+  markerA = L.marker([lat, lon], { icon: iconA }).addTo(map).bindPopup('<b>Diem A</b><br>' + label);
+  updateWpInfo('a', label);
+  clickPhase = 'B';
+  updatePills();
+  updateRouteButton();
+}
+
+function setWaypointB(lat, lon, label) {
+  if (markerB) map.removeLayer(markerB);
+  markerB = L.marker([lat, lon], { icon: iconB }).addTo(map).bindPopup('<b>Diem B</b><br>' + label);
+  updateWpInfo('b', label);
+  clickPhase = 'A';
+  updatePills();
+  updateRouteButton();
+}
+
+function updateWpInfo(which, text) {
+  var el = document.getElementById('wp-' + which + '-info');
+  el.textContent = text;
+  el.classList.remove('empty');
+  el.classList.add('has-value');
+}
+
+function clearWaypoint(which) {
+  if (which === 'a') {
+    if (markerA) { map.removeLayer(markerA); markerA = null; }
+    var el = document.getElementById('wp-a-info');
+    el.textContent = 'Click vao ban do de chon diem A';
+    el.classList.add('empty'); el.classList.remove('has-value');
+    clickPhase = 'A';
+  } else {
+    if (markerB) { map.removeLayer(markerB); markerB = null; }
+    var el2 = document.getElementById('wp-b-info');
+    el2.textContent = 'Click vao ban do de chon diem B';
+    el2.classList.add('empty'); el2.classList.remove('has-value');
+  }
+  if (routePolyline) { map.removeLayer(routePolyline); routePolyline = null; }
+  if (snapMarkerA) { map.removeLayer(snapMarkerA); snapMarkerA = null; }
+  if (snapMarkerB) { map.removeLayer(snapMarkerB); snapMarkerB = null; }
+  document.getElementById('result-card').classList.remove('visible');
+  updatePills();
+  updateRouteButton();
+}
+
+function updatePills() {
+  var pa = document.getElementById('pill-a');
+  var pb = document.getElementById('pill-b');
+  pa.className = 'mode-pill' + (clickPhase === 'A' ? ' active-a' : '');
+  pb.className = 'mode-pill' + (clickPhase === 'B' && markerA ? ' active-b' : '');
+  pa.textContent = markerA ? 'A da chon' : 'Chon diem A';
+  pb.textContent = markerB ? 'B da chon' : 'Cho diem B';
+}
+
+function updateRouteButton() {
+  document.getElementById('btn-route').disabled = !(markerA && markerB);
+}
+
+document.getElementById('btn-clear-a').onclick = function() { clearWaypoint('a'); };
+document.getElementById('btn-clear-b').onclick = function() { clearWaypoint('b'); };
+
+// ── Transport mode ────────────────────────────────────────────────────────
+document.querySelectorAll('.mode-btn').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    document.querySelectorAll('.mode-btn').forEach(function(b) { b.classList.remove('active'); });
+    btn.classList.add('active');
+    transportMode = parseInt(btn.dataset.mode);
+  });
+});
+
+// ── POI Search ────────────────────────────────────────────────────────────
+var poiInput = document.getElementById('poi-search');
+var suggList = document.getElementById('suggestion-list');
+
+poiInput.addEventListener('input', function() {
+  clearTimeout(searchTimeout);
+  var q = poiInput.value.trim();
+  if (q.length < 2) { suggList.classList.remove('open'); return; }
+  searchTimeout = setTimeout(function() { fetchSuggestions(q); }, 350);
+});
+
+poiInput.addEventListener('blur', function() {
+  setTimeout(function() { suggList.classList.remove('open'); }, 200);
+});
+
+function fetchSuggestions(q) {
+  fetch(API_BASE + '/search?q=' + encodeURIComponent(q) + '&limit=8')
+    .then(function(r) { return r.ok ? r.json() : []; })
+    .then(function(data) { renderSuggestions(data); })
+    .catch(function() {});
+}
+
+function renderSuggestions(items) {
+  if (!items || !items.length) { suggList.classList.remove('open'); return; }
+  var html = items.map(function(item) {
+    return '<div class="suggestion-item" data-lat="' + item.lat + '" data-lon="' + item.lon + '" data-name="' + esc(item.name) + '">'
+      + '<span style="flex:1">' + esc(item.name) + '</span>'
+      + '<span class="poi-type-badge">' + esc(item.type || '') + '</span>'
+      + '</div>';
+  }).join('');
+  suggList.innerHTML = html;
+  suggList.classList.add('open');
+  suggList.querySelectorAll('.suggestion-item').forEach(function(el) {
+    el.addEventListener('click', function() {
+      var lat = parseFloat(el.dataset.lat);
+      var lon = parseFloat(el.dataset.lon);
+      var name = el.dataset.name;
+      poiInput.value = '';
+      suggList.classList.remove('open');
+      map.setView([lat, lon], 16);
+      if (!markerA) setWaypointA(lat, lon, name);
+      else setWaypointB(lat, lon, name);
+    });
+  });
+}
+
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Find Route ────────────────────────────────────────────────────────────
+document.getElementById('btn-route').addEventListener('click', findRoute);
+
+function findRoute() {
+  if (!markerA || !markerB) return;
+  var btn = document.getElementById('btn-route');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Dang tinh toan...';
+
+  var latA = markerA.getLatLng().lat;
+  var lonA = markerA.getLatLng().lng;
+  var latB = markerB.getLatLng().lat;
+  var lonB = markerB.getLatLng().lng;
+
+  var t0 = performance.now();
+
+  fetch(API_BASE + '/route/coords', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ lat_a: latA, lon_a: lonA, lat_b: latB, lon_b: lonB, mode: transportMode })
+  })
+  .then(function(res) {
+    if (!res.ok) return res.json().then(function(e) { throw e; });
+    return res.json();
+  })
+  .then(function(data) { renderRoute(data, performance.now() - t0); })
+  .catch(function(e) { showToast('Loi: ' + (e.detail || 'Khong the ket noi API.')); })
+  .finally(function() {
+    btn.disabled = false;
+    btn.textContent = 'Tim duong';
+    updateRouteButton();
+  });
+}
+
+function renderRoute(data, elapsedMs) {
+  if (routePolyline) map.removeLayer(routePolyline);
+  if (snapMarkerA) { map.removeLayer(snapMarkerA); snapMarkerA = null; }
+  if (snapMarkerB) { map.removeLayer(snapMarkerB); snapMarkerB = null; }
+
+  var coords = data.path_coords;
+  if (!coords || coords.length < 2) { showToast('Khong co toa do duong di.'); return; }
+
+  routePolyline = L.polyline(coords, {
+    color: '#4f8ef7', weight: 5, opacity: 0.85, smoothFactor: 1, lineCap: 'round', lineJoin: 'round',
+  }).addTo(map);
+  map.fitBounds(routePolyline.getBounds(), { padding: [40, 40] });
+
+  // Hiển thị snap point (chấm trắng nhỏ trên tim đường)
+  if (data.snap_from) {
+    snapMarkerA = L.circleMarker([data.snap_from.lat, data.snap_from.lon], {
+      radius: 5, color: '#3fb950', fillColor: '#fff', fillOpacity: 1, weight: 2,
+    }).addTo(map).bindTooltip('Snap A: ' + data.snap_from.dist_m + 'm tu click', { permanent: false });
+  }
+  if (data.snap_to) {
+    snapMarkerB = L.circleMarker([data.snap_to.lat, data.snap_to.lon], {
+      radius: 5, color: '#f85149', fillColor: '#fff', fillOpacity: 1, weight: 2,
+    }).addTo(map).bindTooltip('Snap B: ' + data.snap_to.dist_m + 'm tu click', { permanent: false });
+  }
+
+  document.getElementById('res-dist').textContent = data.distance_km.toFixed(2) + ' km';
+  document.getElementById('res-time').textContent = formatTime(data.time_s);
+  document.getElementById('res-pts').textContent = coords.length + ' diem';
+  document.getElementById('res-qtime').textContent = elapsedMs < 1000
+    ? elapsedMs.toFixed(0) + ' ms'
+    : (elapsedMs / 1000).toFixed(2) + ' s';
+  // Hiển thị khoảng cách snap A và B
+  var snapA = data.snap_from ? data.snap_from.dist_m + 'm' : '?';
+  var snapB = data.snap_to   ? data.snap_to.dist_m   + 'm' : '?';
+  document.getElementById('res-snap').textContent = snapA + ' / ' + snapB;
+  document.getElementById('result-card').classList.add('visible');
+}
+
+function formatTime(s) {
+  if (s < 60) return Math.round(s) + ' giay';
+  var m = Math.floor(s / 60), sec = Math.round(s % 60);
+  if (m < 60) return m + ' phut' + (sec > 0 ? ' ' + sec + ' giay' : '');
+  return Math.floor(m/60) + ' gio ' + (m%60) + ' phut';
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────────
+function showToast(msg) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(function() { t.classList.remove('show'); }, 4000);
+}
+
+// ── Health check ──────────────────────────────────────────────────────────
+function checkHealth() {
+  var dot = document.getElementById('status-dot');
+  var txt = document.getElementById('status-text');
+  dot.className = 'status-dot loading';
+  fetch(API_BASE + '/health')
+    .then(function(r) { return r.ok ? r.json() : null; })
+    .then(function(data) {
+      if (!data) throw new Error();
+      dot.className = 'status-dot online';
+      var parts = [];
+      if (data.graph_loaded)    parts.push('Graph OK');
+      if (data.snap_loaded)     parts.push('Snap OK');
+      if (data.geocoder_loaded) parts.push('DB OK');
+      if (data.redis_connected) parts.push('Redis OK');
+      txt.textContent = parts.length ? parts.join(' | ') : 'API online';
+    })
+    .catch(function() {
+      dot.className = 'status-dot error';
+      txt.textContent = 'API offline -- chay docker-compose up';
+    });
+}
+
+// Hide hint after first click
+map.once('click', function() {
+  document.getElementById('map-hint').style.opacity = '0';
+});
+
+checkHealth();
+setInterval(checkHealth, 30000);
+</script>
+</body>
+</html>

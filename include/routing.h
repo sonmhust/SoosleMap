@@ -1,5 +1,6 @@
 #pragma once
 #include "graph.h"
+#include "snap_tree.h"
 #include <vector>
 
 // Kết quả trả về của thuật toán tìm đường
@@ -14,3 +15,9 @@ struct RouteResult {
 // Hàm tìm đường ngắn nhất trên đồ thị CH (Bi-directional Dijkstra)
 // mode: Dùng mask TransportMode (VD: MODE_CAR, MODE_MOTORBIKE)
 RouteResult findShortestPathCH(const CHGraphQuery& graph, uint32_t source, uint32_t target, uint8_t transport_mode);
+
+// Snap-to-edge với LRU cache 64 entry.
+// Drop-in replacement cho snapNearestQuery() — bỏ qua STR-Tree BFS nếu điểm GPS đã có trong cache.
+// Key: tọa độ được round đến 5 chữ số thập phân (~1.1m precision).
+SnapResult snapNearestCached(const SnapTree& tree, const CHGraphQuery& graph,
+                              double lat, double lon);

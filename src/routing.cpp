@@ -1,9 +1,14 @@
 #include "routing.h"
 #include "haversine.h"
+#include "snap_tree.h"
 #include <queue>
 #include <limits>
 #include <algorithm>
 #include <iostream>
+#include <unordered_map>
+#include <list>
+#include <cmath>
+#include <cstdint>
 
 static constexpr float INF_WEIGHT = std::numeric_limits<float>::max();
 
@@ -58,6 +63,89 @@ struct QueryWorkspace {
 };
 
 static QueryWorkspace g_workspace;
+
+// ===== GPS Snap LRU Cache =====
+// Key: GPS tọa độ được round đến ~1.1m precision (5 chữ số thập phân).
+// Tránh chạy lại STR-Tree BFS (~2ms) cho các điểm GPS gần đây đã từng snap.
+// Kích thước cố định 64 entry — đủ cho traffic thực tế, zero heap allocation sau warmup.
+
+static constexpr int SNAP_CACHE_CAPACITY = 64;
+
+// Round tọa độ đến 5 chữ số thập phân (~1.1m precision)
+inline int32_t quantize(double v) {
+    return static_cast<int32_t>(std::round(v * 1e5));
+}
+
+struct SnapCacheKey {
+    int32_t qlat;
+    int32_t qlon;
+    bool operator==(const SnapCacheKey& o) const {
+        return qlat == o.qlat && qlon == o.qlon;
+    }
+};
+
+struct SnapCacheKeyHash {
+    size_t operator()(const SnapCacheKey& k) const noexcept {
+        // Combine two 32-bit ints into a 64-bit hash
+        uint64_t combined = (static_cast<uint64_t>(static_cast<uint32_t>(k.qlat)) << 32)
+                          | static_cast<uint32_t>(k.qlon);
+        // FNV-1a mix
+        combined ^= combined >> 33;
+        combined *= 0xff51afd7ed558ccdULL;
+        combined ^= combined >> 33;
+        return static_cast<size_t>(combined);
+    }
+};
+
+struct SnapLRUCache {
+    using KeyList   = std::list<SnapCacheKey>;
+    using CacheMap  = std::unordered_map<SnapCacheKey, std::pair<SnapResult, KeyList::iterator>, SnapCacheKeyHash>;
+
+    KeyList  lru_list;  // front = most recent
+    CacheMap cache_map;
+
+    SnapResult* get(int32_t qlat, int32_t qlon) {
+        SnapCacheKey key{qlat, qlon};
+        auto it = cache_map.find(key);
+        if (it == cache_map.end()) return nullptr;
+        // Move to front (most recently used)
+        lru_list.splice(lru_list.begin(), lru_list, it->second.second);
+        return &it->second.first;
+    }
+
+    void put(int32_t qlat, int32_t qlon, const SnapResult& result) {
+        SnapCacheKey key{qlat, qlon};
+        auto it = cache_map.find(key);
+        if (it != cache_map.end()) {
+            it->second.first = result;
+            lru_list.splice(lru_list.begin(), lru_list, it->second.second);
+            return;
+        }
+        if (static_cast<int>(cache_map.size()) >= SNAP_CACHE_CAPACITY) {
+            // Evict least recently used (back of list)
+            cache_map.erase(lru_list.back());
+            lru_list.pop_back();
+        }
+        lru_list.push_front(key);
+        cache_map[key] = {result, lru_list.begin()};
+    }
+};
+
+static SnapLRUCache g_snap_cache;
+
+// Public wrapper: snap với LRU cache. Drop-in thay cho snapNearestQuery.
+SnapResult snapNearestCached(const SnapTree& tree, const CHGraphQuery& graph,
+                              double lat, double lon) {
+    int32_t qlat = quantize(lat);
+    int32_t qlon = quantize(lon);
+
+    SnapResult* cached = g_snap_cache.get(qlat, qlon);
+    if (cached) return *cached;
+
+    SnapResult result = snapNearestQuery(tree, graph, lat, lon);
+    g_snap_cache.put(qlat, qlon, result);
+    return result;
+}
 
 // Hàm đệ quy giải nén các shortcut tiến (Forward)
 static void unpackForwardEdge(const CHGraphQuery& graph, uint32_t u, uint32_t v, uint8_t mode, std::vector<uint32_t>& path_nodes) {
