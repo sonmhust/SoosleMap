@@ -1,125 +1,141 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SoosleMap — Routing Engine Ha Noi</title>
-  <meta name="description" content="Demo tim duong Ha Noi su dung C++ Contraction Hierarchies Engine. Click ban do de chon diem xuat phat va dich den." />
+  <title>SoosleMap — Routing Engine Hanoi</title>
+  <meta name="description" content="Demo routing in Hanoi using C++ Contraction Hierarchies Engine. Click the map to select start and end points." />
 
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
 
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg-dark:    #0d1117;
-      --bg-panel:   #161b22;
-      --bg-card:    #21262d;
-      --border:     #30363d;
-      --accent:     #4f8ef7;
-      --accent-glow:#4f8ef740;
-      --green:      #3fb950;
-      --red:        #f85149;
-      --orange:     #e3b341;
-      --text-1:     #e6edf3;
-      --text-2:     #8b949e;
-      --text-3:     #484f58;
-      --radius:     12px;
-      --panel-w:    360px;
+      --bg-dark:    #0c100d;
+      --bg-panel:   #121613;
+      --bg-card:    #191e1a;
+      --border:     #2a322c;
+      --accent:     #c68a42;
+      --accent-ink: #100c06;
+      --accent-glow:#c68a4224;
+      --point-a:    #6fae82;
+      --point-b:    #b3505a;
+      --orange:     #c68a42;
+      --text-1:     #edf0ea;
+      --text-2:     #8b9389;
+      --text-3:     #4a5148;
+      --radius:     6px;
+      --panel-w:    368px;
+      --font-ui:    'Manrope', system-ui, sans-serif;
+      --font-mono:  'JetBrains Mono', ui-monospace, monospace;
     }
 
-    html, body { height: 100%; font-family: 'Inter', system-ui, sans-serif; background: var(--bg-dark); color: var(--text-1); overflow: hidden; }
+    html, body { height: 100%; font-family: var(--font-ui); background: var(--bg-dark); color: var(--text-1); overflow: hidden; }
 
     #app { display: flex; height: 100vh; position: relative; }
 
     #panel { width: var(--panel-w); min-width: var(--panel-w); background: var(--bg-panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; z-index: 10; }
 
-    .panel-header { padding: 20px 20px 16px; border-bottom: 1px solid var(--border); background: linear-gradient(135deg, #1a2332 0%, #161b22 100%); }
+    .panel-header {
+      padding: 22px 20px 18px;
+      border-bottom: 1px solid var(--border);
+      background-color: var(--bg-panel);
+      background-image:
+        linear-gradient(var(--border) 1px, transparent 1px),
+        linear-gradient(90deg, var(--border) 1px, transparent 1px);
+      background-size: 14px 14px;
+      background-position: -1px -1px;
+      background-blend-mode: normal;
+      position: relative;
+    }
+    .panel-header::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, var(--bg-panel) 0%, transparent 55%, var(--bg-panel) 100%); opacity: 0.75; pointer-events: none; }
 
-    .logo { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
-    .logo-icon { width: 32px; height: 32px; background: linear-gradient(135deg, var(--accent), #7c5cfc); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; }
-    .logo-text { font-size: 18px; font-weight: 700; background: linear-gradient(90deg, var(--accent), #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-    .logo-sub { font-size: 11px; color: var(--text-2); margin-top: 2px; letter-spacing: 0.5px; }
+    .logo { display: flex; align-items: center; gap: 12px; margin-bottom: 6px; position: relative; }
+    .logo-icon { width: 34px; height: 34px; background: transparent; border: 1px solid var(--accent); border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 15px; font-family: var(--font-mono); font-weight: 600; color: var(--accent); }
+    .logo-text { font-size: 18px; font-weight: 800; letter-spacing: -0.3px; color: var(--text-1); }
+    .logo-sub { font-family: var(--font-mono); font-size: 10.5px; color: var(--text-2); margin-top: 3px; letter-spacing: 0.4px; position: relative; }
 
     .panel-body { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 14px; }
     .panel-body::-webkit-scrollbar { width: 4px; }
     .panel-body::-webkit-scrollbar-track { background: transparent; }
     .panel-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
 
-    .section-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: var(--text-2); margin-bottom: 8px; }
+    .section-label { font-family: var(--font-mono); font-size: 10.5px; font-weight: 500; letter-spacing: 0.3px; color: var(--text-2); margin-bottom: 9px; display: flex; align-items: center; gap: 6px; }
+    .section-label::before { content: ''; width: 5px; height: 5px; background: var(--text-3); flex-shrink: 0; }
 
     .search-group { position: relative; }
-    .search-input { width: 100%; background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 10px 36px 10px 12px; color: var(--text-1); font-family: inherit; font-size: 13px; transition: border-color 0.2s, box-shadow 0.2s; outline: none; }
+    .search-input { width: 100%; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 36px 10px 12px; color: var(--text-1); font-family: var(--font-ui); font-size: 13px; transition: border-color 0.2s; outline: none; }
     .search-input::placeholder { color: var(--text-3); }
-    .search-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
-    .search-icon { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: var(--text-2); font-size: 14px; pointer-events: none; }
+    .search-input:focus { border-color: var(--accent); }
+    .search-icon { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: var(--text-3); font-size: 13px; pointer-events: none; }
 
-    .suggestion-list { position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; z-index: 9999; display: none; max-height: 200px; overflow-y: auto; }
+    .suggestion-list { position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; z-index: 9999; display: none; max-height: 200px; overflow-y: auto; }
     .suggestion-list.open { display: block; }
     .suggestion-item { padding: 9px 12px; font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: background 0.15s; border-bottom: 1px solid var(--border); }
     .suggestion-item:last-child { border-bottom: none; }
     .suggestion-item:hover { background: var(--bg-panel); }
-    .poi-type-badge { font-size: 10px; padding: 2px 6px; border-radius: 4px; background: var(--bg-dark); color: var(--text-2); white-space: nowrap; flex-shrink: 0; }
+    .poi-type-badge { font-family: var(--font-mono); font-size: 9.5px; padding: 2px 6px; border-radius: 3px; border: 1px solid var(--border); color: var(--text-2); white-space: nowrap; flex-shrink: 0; }
 
-    .waypoint-row { display: flex; align-items: center; gap: 8px; }
-    .waypoint-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; border: 2px solid; }
-    .dot-a { background: var(--green); border-color: var(--green); }
-    .dot-b { background: var(--red);   border-color: var(--red); }
-    .waypoint-info { flex: 1; background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; font-size: 12px; min-height: 36px; display: flex; align-items: center; }
+    .waypoint-row { display: flex; align-items: center; gap: 10px; }
+    .waypoint-dot { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; transform: rotate(45deg); border: none; }
+    .dot-a { background: var(--point-a); }
+    .dot-b { background: var(--point-b); }
+    .waypoint-info { flex: 1; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 12px; font-size: 12px; font-family: var(--font-mono); min-height: 36px; display: flex; align-items: center; }
     .waypoint-info.has-value { color: var(--text-1); }
-    .waypoint-info.empty { color: var(--text-3); font-style: italic; }
+    .waypoint-info.empty { color: var(--text-3); font-style: normal; font-family: var(--font-ui); }
     .clear-btn { background: none; border: none; color: var(--text-3); cursor: pointer; font-size: 14px; padding: 4px; border-radius: 4px; transition: color 0.15s; line-height: 1; }
-    .clear-btn:hover { color: var(--red); }
+    .clear-btn:hover { color: var(--point-b); }
 
-    .mode-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-    .mode-btn { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 10px 8px; color: var(--text-2); font-family: inherit; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.2s; }
-    .mode-btn:hover { border-color: var(--accent); color: var(--text-1); }
-    .mode-btn.active { background: var(--accent-glow); border-color: var(--accent); color: var(--accent); }
+    .mode-grid { display: flex; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+    .mode-btn { flex: 1; background: var(--bg-card); border: none; border-right: 1px solid var(--border); padding: 10px 8px; color: var(--text-2); font-family: var(--font-ui); font-size: 12.5px; font-weight: 500; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: background 0.15s, color 0.15s; }
+    .mode-btn:last-child { border-right: none; }
+    .mode-btn:hover { color: var(--text-1); }
+    .mode-btn.active { background: var(--accent); color: var(--accent-ink); font-weight: 700; }
 
-    #btn-route { width: 100%; padding: 12px; background: linear-gradient(135deg, var(--accent), #7c5cfc); border: none; border-radius: 8px; color: #fff; font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer; transition: opacity 0.2s, transform 0.1s; position: relative; overflow: hidden; }
-    #btn-route::before { content: ''; position: absolute; inset: 0; background: rgba(255,255,255,0.1); opacity: 0; transition: opacity 0.2s; }
-    #btn-route:hover::before { opacity: 1; }
-    #btn-route:active { transform: scale(0.98); }
-    #btn-route:disabled { opacity: 0.5; cursor: not-allowed; }
+    #btn-route { width: 100%; padding: 12px; background: var(--accent); border: none; border-radius: var(--radius); color: var(--accent-ink); font-family: var(--font-ui); font-size: 14px; font-weight: 700; cursor: pointer; transition: background 0.15s, transform 0.1s; }
+    #btn-route:hover:not(:disabled) { background: #d9a05c; }
+    #btn-route:active:not(:disabled) { transform: scale(0.98); }
+    #btn-route:disabled { background: var(--bg-card); color: var(--text-3); cursor: not-allowed; }
 
-    #result-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; display: none; }
+    #result-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 4px 14px; display: none; }
     #result-card.visible { display: block; }
-    .result-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+    .result-row { display: flex; justify-content: space-between; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
     .result-row:last-child { border-bottom: none; }
     .result-key { color: var(--text-2); }
-    .result-val { font-weight: 600; color: var(--text-1); }
-    .result-val.green { color: var(--green); }
+    .result-val { font-weight: 600; color: var(--text-1); font-family: var(--font-mono); }
+    .result-val.green { color: var(--point-a); }
     .result-val.accent { color: var(--accent); }
 
-    #status-bar { padding: 10px 16px; border-top: 1px solid var(--border); font-size: 12px; color: var(--text-2); background: var(--bg-dark); display: flex; align-items: center; gap: 8px; }
-    .status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-3); flex-shrink: 0; }
-    .status-dot.online  { background: var(--green); box-shadow: 0 0 6px var(--green); animation: pulse 2s infinite; }
+    #status-bar { padding: 10px 16px; border-top: 1px solid var(--border); font-family: var(--font-mono); font-size: 11px; color: var(--text-2); background: var(--bg-dark); display: flex; align-items: center; gap: 8px; }
+    .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-3); flex-shrink: 0; }
+    .status-dot.online  { background: var(--point-a); box-shadow: 0 0 6px var(--point-a); animation: pulse 2s infinite; }
     .status-dot.loading { background: var(--orange); }
-    .status-dot.error   { background: var(--red); }
+    .status-dot.error   { background: var(--point-b); }
     @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
 
     #map { flex: 1; position: relative; }
 
-    #map-hint { position: absolute; top: 16px; left: 50%; transform: translateX(-50%); z-index: 500; background: rgba(13,17,23,0.85); backdrop-filter: blur(12px); border: 1px solid var(--border); border-radius: 20px; padding: 8px 16px; font-size: 12px; color: var(--text-2); pointer-events: none; white-space: nowrap; transition: opacity 0.4s; }
+    #map-hint { position: absolute; top: 16px; left: 50%; transform: translateX(-50%); z-index: 500; background: rgba(12,16,13,0.88); backdrop-filter: blur(10px); border: 1px solid var(--border); border-radius: var(--radius); padding: 7px 14px; font-family: var(--font-mono); font-size: 11.5px; color: var(--text-2); pointer-events: none; white-space: nowrap; transition: opacity 0.4s; }
 
-    #mode-indicator { position: absolute; top: 16px; right: 16px; z-index: 500; display: flex; flex-direction: column; gap: 6px; }
-    .mode-pill { background: rgba(13,17,23,0.85); backdrop-filter: blur(12px); border: 1px solid var(--border); border-radius: 8px; padding: 6px 12px; font-size: 11px; font-weight: 500; color: var(--text-2); }
-    .mode-pill.active-a { border-color: var(--green); color: var(--green); }
-    .mode-pill.active-b { border-color: var(--red); color: var(--red); }
+    #mode-indicator { position: absolute; top: 16px; right: 16px; z-index: 500; display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
+    .mode-pill { background: rgba(12,16,13,0.88); backdrop-filter: blur(10px); border: 1px solid var(--border); border-radius: var(--radius); padding: 6px 12px; font-family: var(--font-mono); font-size: 10.5px; font-weight: 500; color: var(--text-2); }
+    .mode-pill.active-a { border-color: var(--point-a); color: var(--point-a); }
+    .mode-pill.active-b { border-color: var(--point-b); color: var(--point-b); }
 
-    .leaflet-tile-pane { filter: brightness(0.75) saturate(0.7) hue-rotate(10deg); }
-    .leaflet-control-attribution { background: rgba(13,17,23,0.8) !important; color: var(--text-3) !important; }
+    .leaflet-tile-pane { filter: brightness(0.68) contrast(1.04) saturate(0.35) sepia(0.12); }
+    .leaflet-control-attribution { background: rgba(12,16,13,0.8) !important; color: var(--text-3) !important; }
     .leaflet-control-attribution a { color: var(--text-2) !important; }
     .leaflet-control-zoom a { background: var(--bg-card) !important; color: var(--text-1) !important; border-color: var(--border) !important; }
     .leaflet-control-zoom a:hover { background: var(--bg-panel) !important; }
 
-    .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.6s linear infinite; vertical-align: middle; margin-right: 6px; }
+    .spinner { display: inline-block; width: 12px; height: 12px; border: 2px solid rgba(16,12,6,0.3); border-top-color: var(--accent-ink); border-radius: 50%; animation: spin 0.6s linear infinite; vertical-align: middle; margin-right: 6px; }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    #toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px); background: #2d1a1a; border: 1px solid var(--red); border-radius: 8px; padding: 10px 20px; font-size: 13px; color: #ffa8a8; z-index: 9999; transition: transform 0.3s ease; pointer-events: none; white-space: nowrap; }
+    #toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px); background: #201314; border: 1px solid var(--point-b); border-radius: var(--radius); padding: 10px 20px; font-family: var(--font-mono); font-size: 12.5px; color: #f0b3ba; z-index: 9999; transition: transform 0.3s ease; pointer-events: none; white-space: nowrap; }
     #toast.show { transform: translateX(-50%) translateY(0); }
 
     @media (max-width: 640px) {
@@ -135,10 +151,10 @@
   <div id="panel">
     <div class="panel-header">
       <div class="logo">
-        <div class="logo-icon">&#128506;</div>
+        <div class="logo-icon">CH</div>
         <div>
           <div class="logo-text">SoosleMap</div>
-          <div class="logo-sub">Routing Engine &middot; Ha Noi &middot; C++ CH</div>
+          <div class="logo-sub">21.03N 105.85E &nbsp;/&nbsp; C++ Contraction Hierarchies</div>
         </div>
       </div>
     </div>
@@ -146,10 +162,10 @@
     <div class="panel-body">
       <!-- POI Search -->
       <div>
-        <div class="section-label">&#128269; Tim kiem dia diem</div>
+        <div class="section-label">Search location</div>
         <div class="search-group">
           <input id="poi-search" class="search-input" type="text"
-            placeholder="Ho Hoan Kiem, Ly Thuong Kiet..."
+            placeholder="Hoan Kiem Lake, Ly Thuong Kiet..."
             autocomplete="off" />
           <span class="search-icon">&#9906;</span>
           <div class="suggestion-list" id="suggestion-list"></div>
@@ -158,51 +174,49 @@
 
       <!-- Waypoints -->
       <div>
-        <div class="section-label">&#128205; Diem xuat phat &amp; Dich den</div>
+        <div class="section-label">Start &amp; Destination</div>
         <div style="display:flex;flex-direction:column;gap:8px;">
           <div class="waypoint-row">
             <div class="waypoint-dot dot-a"></div>
-            <div class="waypoint-info empty" id="wp-a-info">Click vao ban do de chon diem A</div>
-            <button class="clear-btn" id="btn-clear-a" title="Xoa diem A">&#10005;</button>
+            <div class="waypoint-info empty" id="wp-a-info">Click the map to select point A</div>
+            <button class="clear-btn" id="btn-clear-a" title="Clear point A">&#10005;</button>
           </div>
           <div class="waypoint-row">
             <div class="waypoint-dot dot-b"></div>
-            <div class="waypoint-info empty" id="wp-b-info">Click vao ban do de chon diem B</div>
-            <button class="clear-btn" id="btn-clear-b" title="Xoa diem B">&#10005;</button>
+            <div class="waypoint-info empty" id="wp-b-info">Click the map to select point B</div>
+            <button class="clear-btn" id="btn-clear-b" title="Clear point B">&#10005;</button>
           </div>
         </div>
-        <p style="font-size:11px;color:var(--text-3);margin-top:8px;">
-          &#128161; Click lan luot: lan 1 = diem A, lan 2 = diem B
+        <p style="font-family:var(--font-mono);font-size:10.5px;color:var(--text-3);margin-top:8px;">
+          Click sequentially: 1st = Point A, 2nd = Point B
         </p>
       </div>
 
       <!-- Transport mode -->
       <div>
-        <div class="section-label">&#128663; Phuong tien</div>
+        <div class="section-label">Vehicle</div>
         <div class="mode-grid">
-          <button class="mode-btn active" data-mode="1" id="mode-car">&#128663; O to</button>
-          <button class="mode-btn" data-mode="2" id="mode-moto">&#127949; Xe may</button>
-          <button class="mode-btn" data-mode="4" id="mode-bike">&#128690; Xe dap</button>
-          <button class="mode-btn" data-mode="8" id="mode-walk">&#128694; Di bo</button>
+          <button class="mode-btn active" data-mode="1" id="mode-car">Car</button>
+          <button class="mode-btn" data-mode="2" id="mode-moto">Motorbike</button>
         </div>
       </div>
 
       <!-- Route button -->
-      <button id="btn-route" disabled>Tim duong</button>
+      <button id="btn-route" disabled>Find Route</button>
 
       <!-- Result -->
       <div id="result-card">
-        <div class="section-label" style="margin-bottom:10px;">&#128200; Ket qua tuyen duong</div>
+        <div class="section-label" style="margin-bottom:10px;">Route Results</div>
         <div class="result-row">
-          <span class="result-key">Khoang cach</span>
+          <span class="result-key">Distance</span>
           <span class="result-val green" id="res-dist">--</span>
         </div>
         <div class="result-row">
-          <span class="result-key">Thoi gian</span>
+          <span class="result-key">Time</span>
           <span class="result-val accent" id="res-time">--</span>
         </div>
         <div class="result-row">
-          <span class="result-key">So diem duong</span>
+          <span class="result-key">Waypoints</span>
           <span class="result-val" id="res-pts">--</span>
         </div>
         <div class="result-row">
@@ -218,15 +232,15 @@
 
     <div id="status-bar">
       <div class="status-dot" id="status-dot"></div>
-      <span id="status-text">Dang ket noi API...</span>
+      <span id="status-text">Connecting to API...</span>
     </div>
   </div>
 
   <div id="map">
-    <div id="map-hint">&#128432; Click ban do: lan 1 = diem A, lan 2 = diem B</div>
+    <div id="map-hint">CLICK MAP &middot; 1ST = POINT A &middot; 2ND = POINT B</div>
     <div id="mode-indicator">
-      <div class="mode-pill active-a" id="pill-a">&#9679; Chon diem A</div>
-      <div class="mode-pill" id="pill-b">&#9675; Cho diem B</div>
+      <div class="mode-pill active-a" id="pill-a">&#9670; SELECT POINT A</div>
+      <div class="mode-pill" id="pill-b">&#9671; WAIT FOR POINT B</div>
     </div>
   </div>
 </div>
@@ -236,13 +250,11 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 // ── Config ──────────────────────────────────────────────────────────────
-// API_BASE: '' = same origin (khi Nginx serve ca frontend + API)
-// Doi thanh 'http://localhost:8000' khi test local truc tiep
 const API_BASE = '';
 
 // ── State ────────────────────────────────────────────────────────────────
 var markerA = null, markerB = null;
-var snapMarkerA = null, snapMarkerB = null;  // chấm snap trên tim đường
+var snapMarkerA = null, snapMarkerB = null;
 var routePolyline = null;
 var clickPhase = 'A';
 var transportMode = 1;
@@ -264,14 +276,14 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 function makeIcon(color, label) {
   return L.divIcon({
     className: '',
-    html: '<div style="width:32px;height:32px;background:' + color + ';border:3px solid #fff;border-radius:50% 50% 50% 0;transform:rotate(-45deg);box-shadow:0 2px 8px rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;"><span style="transform:rotate(45deg);font-size:12px;font-weight:700;color:#fff;">' + label + '</span></div>',
-    iconSize: [32, 32],
-    iconAnchor: [16, 32],
+    html: '<div style="width:30px;height:30px;background:' + color + ';border:2px solid #0c100d;border-radius:50% 50% 50% 0;transform:rotate(-45deg);box-shadow:0 2px 6px rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;font-family:\'JetBrains Mono\',monospace;"><span style="transform:rotate(45deg);font-size:11px;font-weight:600;color:#0c100d;">' + label + '</span></div>',
+    iconSize: [30, 30],
+    iconAnchor: [15, 30],
   });
 }
 
-var iconA = makeIcon('#3fb950', 'A');
-var iconB = makeIcon('#f85149', 'B');
+var iconA = makeIcon('#6fae82', 'A');
+var iconB = makeIcon('#b3505a', 'B');
 
 // ── Map click ────────────────────────────────────────────────────────────
 map.on('click', function(e) {
@@ -285,7 +297,7 @@ map.on('click', function(e) {
 
 function setWaypointA(lat, lon, label) {
   if (markerA) map.removeLayer(markerA);
-  markerA = L.marker([lat, lon], { icon: iconA }).addTo(map).bindPopup('<b>Diem A</b><br>' + label);
+  markerA = L.marker([lat, lon], { icon: iconA }).addTo(map).bindPopup('<b>Point A</b><br>' + label);
   updateWpInfo('a', label);
   clickPhase = 'B';
   updatePills();
@@ -294,7 +306,7 @@ function setWaypointA(lat, lon, label) {
 
 function setWaypointB(lat, lon, label) {
   if (markerB) map.removeLayer(markerB);
-  markerB = L.marker([lat, lon], { icon: iconB }).addTo(map).bindPopup('<b>Diem B</b><br>' + label);
+  markerB = L.marker([lat, lon], { icon: iconB }).addTo(map).bindPopup('<b>Point B</b><br>' + label);
   updateWpInfo('b', label);
   clickPhase = 'A';
   updatePills();
@@ -312,13 +324,13 @@ function clearWaypoint(which) {
   if (which === 'a') {
     if (markerA) { map.removeLayer(markerA); markerA = null; }
     var el = document.getElementById('wp-a-info');
-    el.textContent = 'Click vao ban do de chon diem A';
+    el.textContent = 'Click the map to select point A';
     el.classList.add('empty'); el.classList.remove('has-value');
     clickPhase = 'A';
   } else {
     if (markerB) { map.removeLayer(markerB); markerB = null; }
     var el2 = document.getElementById('wp-b-info');
-    el2.textContent = 'Click vao ban do de chon diem B';
+    el2.textContent = 'Click the map to select point B';
     el2.classList.add('empty'); el2.classList.remove('has-value');
   }
   if (routePolyline) { map.removeLayer(routePolyline); routePolyline = null; }
@@ -334,8 +346,8 @@ function updatePills() {
   var pb = document.getElementById('pill-b');
   pa.className = 'mode-pill' + (clickPhase === 'A' ? ' active-a' : '');
   pb.className = 'mode-pill' + (clickPhase === 'B' && markerA ? ' active-b' : '');
-  pa.textContent = markerA ? 'A da chon' : 'Chon diem A';
-  pb.textContent = markerB ? 'B da chon' : 'Cho diem B';
+  pa.textContent = (markerA ? '\u25C6 A SELECTED' : '\u25C6 SELECT POINT A');
+  pb.textContent = (markerB ? '\u25C6 B SELECTED' : '\u25C7 WAIT FOR POINT B');
 }
 
 function updateRouteButton() {
@@ -411,7 +423,7 @@ function findRoute() {
   if (!markerA || !markerB) return;
   var btn = document.getElementById('btn-route');
   btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span>Dang tinh toan...';
+  btn.innerHTML = '<span class="spinner"></span>Calculating...';
 
   var latA = markerA.getLatLng().lat;
   var lonA = markerA.getLatLng().lng;
@@ -430,10 +442,10 @@ function findRoute() {
     return res.json();
   })
   .then(function(data) { renderRoute(data, performance.now() - t0); })
-  .catch(function(e) { showToast('Loi: ' + (e.detail || 'Khong the ket noi API.')); })
+  .catch(function(e) { showToast('Error: ' + (e.detail || 'Cannot connect to API.')); })
   .finally(function() {
     btn.disabled = false;
-    btn.textContent = 'Tim duong';
+    btn.textContent = 'Find Route';
     updateRouteButton();
   });
 }
@@ -444,32 +456,31 @@ function renderRoute(data, elapsedMs) {
   if (snapMarkerB) { map.removeLayer(snapMarkerB); snapMarkerB = null; }
 
   var coords = data.path_coords;
-  if (!coords || coords.length < 2) { showToast('Khong co toa do duong di.'); return; }
+  if (!coords || coords.length < 2) { showToast('No path coordinates found.'); return; }
 
   routePolyline = L.polyline(coords, {
-    color: '#4f8ef7', weight: 5, opacity: 0.85, smoothFactor: 1, lineCap: 'round', lineJoin: 'round',
+    color: '#c68a42', weight: 4, opacity: 0.9, smoothFactor: 1, lineCap: 'round', lineJoin: 'round',
   }).addTo(map);
   map.fitBounds(routePolyline.getBounds(), { padding: [40, 40] });
 
-  // Hiển thị snap point (chấm trắng nhỏ trên tim đường)
   if (data.snap_from) {
     snapMarkerA = L.circleMarker([data.snap_from.lat, data.snap_from.lon], {
-      radius: 5, color: '#3fb950', fillColor: '#fff', fillOpacity: 1, weight: 2,
-    }).addTo(map).bindTooltip('Snap A: ' + data.snap_from.dist_m + 'm tu click', { permanent: false });
+      radius: 5, color: '#6fae82', fillColor: '#0c100d', fillOpacity: 1, weight: 2,
+    }).addTo(map).bindTooltip('Snap A: ' + data.snap_from.dist_m + 'm from click', { permanent: false });
   }
   if (data.snap_to) {
     snapMarkerB = L.circleMarker([data.snap_to.lat, data.snap_to.lon], {
-      radius: 5, color: '#f85149', fillColor: '#fff', fillOpacity: 1, weight: 2,
-    }).addTo(map).bindTooltip('Snap B: ' + data.snap_to.dist_m + 'm tu click', { permanent: false });
+      radius: 5, color: '#b3505a', fillColor: '#0c100d', fillOpacity: 1, weight: 2,
+    }).addTo(map).bindTooltip('Snap B: ' + data.snap_to.dist_m + 'm from click', { permanent: false });
   }
 
   document.getElementById('res-dist').textContent = data.distance_km.toFixed(2) + ' km';
   document.getElementById('res-time').textContent = formatTime(data.time_s);
-  document.getElementById('res-pts').textContent = coords.length + ' diem';
+  document.getElementById('res-pts').textContent = coords.length + ' points';
   document.getElementById('res-qtime').textContent = elapsedMs < 1000
     ? elapsedMs.toFixed(0) + ' ms'
     : (elapsedMs / 1000).toFixed(2) + ' s';
-  // Hiển thị khoảng cách snap A và B
+  
   var snapA = data.snap_from ? data.snap_from.dist_m + 'm' : '?';
   var snapB = data.snap_to   ? data.snap_to.dist_m   + 'm' : '?';
   document.getElementById('res-snap').textContent = snapA + ' / ' + snapB;
@@ -477,10 +488,10 @@ function renderRoute(data, elapsedMs) {
 }
 
 function formatTime(s) {
-  if (s < 60) return Math.round(s) + ' giay';
+  if (s < 60) return Math.round(s) + ' seconds';
   var m = Math.floor(s / 60), sec = Math.round(s % 60);
-  if (m < 60) return m + ' phut' + (sec > 0 ? ' ' + sec + ' giay' : '');
-  return Math.floor(m/60) + ' gio ' + (m%60) + ' phut';
+  if (m < 60) return m + ' minutes' + (sec > 0 ? ' ' + sec + ' seconds' : '');
+  return Math.floor(m/60) + ' hours ' + (m%60) + ' minutes';
 }
 
 // ── Toast ─────────────────────────────────────────────────────────────────
@@ -510,7 +521,7 @@ function checkHealth() {
     })
     .catch(function() {
       dot.className = 'status-dot error';
-      txt.textContent = 'API offline -- chay docker-compose up';
+      txt.textContent = 'API offline -- run docker-compose up';
     });
 }
 
