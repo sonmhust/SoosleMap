@@ -18,12 +18,18 @@ if [ "$ALL_PRESENT" = true ]; then
     echo "[init] Đủ dữ liệu, bỏ qua bước tải."
 else
     if [ -n "$DATA_URL" ]; then
+        FILENAME=$(basename "$DATA_URL")
         echo "[init] Đang tải dữ liệu từ: $DATA_URL"
-        wget -q --show-progress -O /tmp/map-data.zip "$DATA_URL"
+        wget -q --show-progress -O "/tmp/$FILENAME" "$DATA_URL"
         echo "[init] Giải nén vào $DATA_DIR..."
         mkdir -p "$DATA_DIR"
-        unzip -o /tmp/map-data.zip -d "$DATA_DIR"
-        rm /tmp/map-data.zip
+        
+        if [[ "$FILENAME" == *.7z ]]; then
+            7z x "/tmp/$FILENAME" -o"$DATA_DIR" -y
+        else
+            unzip -o "/tmp/$FILENAME" -d "$DATA_DIR" || 7z x "/tmp/$FILENAME" -o"$DATA_DIR" -y
+        fi
+        rm "/tmp/$FILENAME"
         echo "[init] Tải xong."
     else
         echo "[init] CẢNH BÁO: Thiếu dữ liệu và không có biến DATA_URL."

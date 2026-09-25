@@ -32,6 +32,7 @@ RUN apt-get update && apt-get install -y \
     libsqlite3-0 \
     wget \
     unzip \
+    p7zip-full \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
